@@ -1,0 +1,3 @@
+#include "../src/glviz.hpp"
+#include "../src/buffer.hpp"
+#include "../src/program.hpp"
