@@ -28,6 +28,7 @@
 #include <vector>
 #include <array>
 #include <exception>
+#include <cmath>
 
 using namespace Eigen;
 
@@ -168,9 +169,18 @@ struct MyViz
 
 std::unique_ptr<MyViz> viz;
 
+std::vector<Eigen::Vector3f>               m_ref_vertices;
+std::vector<Eigen::Vector3f>               m_ref_normals;
+
 std::vector<Eigen::Vector3f>               m_vertices;
 std::vector<Eigen::Vector3f>               m_normals;
 std::vector<std::array<unsigned int, 3> >  m_faces;
+
+
+void load_raw(std::string const& filename);
+void save_raw(std::string const& filename);
+void set_vertex_normals_from_triangle_mesh();
+void load_triangle_mesh(std::string const& filename);
 
 void
 displayFunc()
@@ -225,12 +235,24 @@ timerFunc(int delta_t_msec)
     {
         g_time += delta_t_sec;
 
-        AngleAxisf rotation(0.015f, Vector3f::UnitY());
+        const float k = 50.0f;
+        const float a = 0.03f;
+        const float v = 10.0f;
 
         for (unsigned int i(0); i < m_vertices.size(); ++i)
         {
-            m_vertices[i] = rotation * m_vertices[i];
+            const float x = m_ref_vertices[i].x() + m_ref_vertices[i].y()
+                + m_ref_vertices[i].z();
+
+            const float u = 5.0f * (x - 0.75f * std::sin(2.5f * g_time));
+            const float w = (a / 2.0f) * (1.0f
+                + std::sin(k * x + v * g_time));
+
+            m_vertices[i] = m_ref_vertices[i] + (std::exp(-u * u) * w)
+                * m_ref_normals[i];
         }
+
+        set_vertex_normals_from_triangle_mesh();
     }
 }
 
@@ -369,6 +391,9 @@ load_triangle_mesh(std::string const& filename)
     std::cout << "  #faces    " << m_faces.size() << std::endl;
 
     set_vertex_normals_from_triangle_mesh();
+    
+    m_ref_vertices = m_vertices;
+    m_ref_normals = m_normals;
 }
 
 }
