@@ -3,13 +3,10 @@ set(SOURCES
     src/LoadOGLCore.cpp
     src/TwBar.cpp
     src/TwColors.cpp
-    src/TwEventGLFW.c
-    src/TwEventGLUT.c
     src/TwEventSDL.c
     src/TwEventSDL12.c
     src/TwEventSDL13.c
     src/TwEventSDL20.c
-    src/TwEventSFML.cpp
     src/TwFonts.cpp
     src/TwMgr.cpp
     src/TwOpenGL.cpp

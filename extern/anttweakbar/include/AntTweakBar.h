@@ -283,7 +283,7 @@ TW_API void     TW_CALL TwHandleErrors(TwErrorHandler errorHandler);
 //  Helper functions to translate events from some common window management
 //  frameworks to AntTweakBar.
 //  They call TwKeyPressed, TwMouse* and TwWindowSize for you (implemented in
-//  files TwEventWin.c TwEventSDL*.c TwEventGLFW.c TwEventGLUT.c)
+//  files TwEventWin.c TwEventSDL*.c)
 // ----------------------------------------------------------------------------
 
 // For Windows message proc
@@ -299,46 +299,6 @@ TW_API void     TW_CALL TwHandleErrors(TwErrorHandler errorHandler);
 
 // For libSDL event loop
 TW_API int      TW_CALL TwEventSDL(const void *sdlEvent, unsigned char sdlMajorVersion, unsigned char sdlMinorVersion);
-
-// For GLFW event callbacks
-// You should define GLFW_CDECL before including AntTweakBar.h if your version of GLFW uses cdecl calling convensions
-#ifdef GLFW_CDECL
-    TW_API int TW_CDECL_CALL TwEventMouseButtonGLFWcdecl(int glfwButton, int glfwAction);
-    TW_API int TW_CDECL_CALL TwEventKeyGLFWcdecl(int glfwKey, int glfwAction);
-    TW_API int TW_CDECL_CALL TwEventCharGLFWcdecl(int glfwChar, int glfwAction);
-    TW_API int TW_CDECL_CALL TwEventMousePosGLFWcdecl(int mouseX, int mouseY);
-    TW_API int TW_CDECL_CALL TwEventMouseWheelGLFWcdecl(int wheelPos);
-#   define TwEventMouseButtonGLFW TwEventMouseButtonGLFWcdecl
-#   define TwEventKeyGLFW         TwEventKeyGLFWcdecl
-#   define TwEventCharGLFW        TwEventCharGLFWcdecl
-#   define TwEventMousePosGLFW    TwEventMousePosGLFWcdecl
-#   define TwEventMouseWheelGLFW  TwEventMouseWheelGLFWcdecl
-#else
-    TW_API int  TW_CALL TwEventMouseButtonGLFW(int glfwButton, int glfwAction);
-    TW_API int  TW_CALL TwEventKeyGLFW(int glfwKey, int glfwAction);
-    TW_API int  TW_CALL TwEventCharGLFW(int glfwChar, int glfwAction);
-#   define TwEventMousePosGLFW     TwMouseMotion
-#   define TwEventMouseWheelGLFW   TwMouseWheel
-#endif
-
-// For GLUT event callbacks (Windows calling convention for GLUT callbacks is cdecl)
-#if defined(_WIN32) || defined(_WIN64)
-#   define TW_GLUT_CALL TW_CDECL_CALL
-#else
-#   define TW_GLUT_CALL
-#endif
-TW_API int TW_GLUT_CALL TwEventMouseButtonGLUT(int glutButton, int glutState, int mouseX, int mouseY);
-TW_API int TW_GLUT_CALL TwEventMouseMotionGLUT(int mouseX, int mouseY);
-TW_API int TW_GLUT_CALL TwEventKeyboardGLUT(unsigned char glutKey, int mouseX, int mouseY);
-TW_API int TW_GLUT_CALL TwEventSpecialGLUT(int glutKey, int mouseX, int mouseY);
-TW_API int TW_CALL      TwGLUTModifiersFunc(int (TW_CALL *glutGetModifiersFunc)(void));
-typedef void (TW_GLUT_CALL *GLUTmousebuttonfun)(int glutButton, int glutState, int mouseX, int mouseY);
-typedef void (TW_GLUT_CALL *GLUTmousemotionfun)(int mouseX, int mouseY);
-typedef void (TW_GLUT_CALL *GLUTkeyboardfun)(unsigned char glutKey, int mouseX, int mouseY);
-typedef void (TW_GLUT_CALL *GLUTspecialfun)(int glutKey, int mouseX, int mouseY);
-
-// For SFML event loop
-TW_API int      TW_CALL TwEventSFML(const void *sfmlEvent, unsigned char sfmlMajorVersion, unsigned char sfmlMinorVersion);
 
 // For X11 event loop
 #if defined(_UNIX)
