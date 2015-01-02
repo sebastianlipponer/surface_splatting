@@ -17,6 +17,9 @@
 
 #version 330
 
+#define SMOOTH     0
+#define WIREFRAME  0
+
 layout(std140) uniform Material
 {
     vec3 color;
@@ -32,7 +35,7 @@ layout (std140) uniform Wireframe
 
 in block
 {
-    #ifdef SMOOTH
+    #if SMOOTH
         vec3 normal;
     #else
         flat vec3 normal;
@@ -40,7 +43,7 @@ in block
 
     vec3 position;
     
-    #ifdef WIREFRAME
+    #if WIREFRAME
         noperspective vec3 distance;
     #endif
 }
@@ -51,7 +54,7 @@ layout(location = FRAG_COLOR, index = 0) out vec4 frag_color;
 
 void main()
 {
-    #ifdef SMOOTH
+    #if SMOOTH
         vec3 normal_eye = normalize(In.normal);
     #else
         vec3 normal_eye = In.normal;
@@ -77,7 +80,7 @@ void main()
     color += 0.1 * spe * vec3(1.0);
     color += 0.1 * rim * vec3(1.0);
 
-    #ifdef WIREFRAME
+    #if WIREFRAME
         float d = min(In.distance.x, min(In.distance.y, In.distance.z));
         float i = exp2(-0.75 * d * d);
         color = mix(color, color_wireframe, i);

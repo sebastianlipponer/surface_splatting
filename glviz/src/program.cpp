@@ -216,17 +216,10 @@ ProgramMesh3::initialize_program_obj()
 {
     try
     {
-        std::set<std::string> defines;
+        std::map<std::string, int> defines;
 
-        if (m_wireframe)
-        {
-            defines.insert("WIREFRAME");
-        }
-
-        if (m_smooth)
-        {
-            defines.insert("SMOOTH");
-        }
+        defines.insert(std::make_pair("WIREFRAME", m_wireframe ? 1 : 0));
+        defines.insert(std::make_pair("SMOOTH", m_smooth ? 1 : 0));
 
         m_mesh3_vs_obj.compile(defines);
         m_mesh3_gs_obj.compile(defines);

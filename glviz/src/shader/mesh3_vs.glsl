@@ -17,6 +17,8 @@
 
 #version 330
 
+#define SMOOTH  0
+
 layout(std140, column_major) uniform Camera
 {
     mat4 modelview_matrix;
@@ -26,14 +28,14 @@ layout(std140, column_major) uniform Camera
 #define ATTR_POSITION 0
 layout(location = ATTR_POSITION) in vec3 position;
 
-#ifdef SMOOTH
+#if SMOOTH
     #define ATTR_NORMAL 1
     layout(location = ATTR_NORMAL) in vec3 normal;
 #endif
 
 out block
 {
-    #ifdef SMOOTH
+    #if SMOOTH
         vec3 normal;
     #endif
     vec3 position;
@@ -44,7 +46,7 @@ void main()
 {
     vec4 position_eye = modelview_matrix * vec4(position, 1.0);
 
-    #ifdef SMOOTH
+    #if SMOOTH
         Out.normal = mat3(modelview_matrix) * normal;
     #endif
     Out.position = vec3(position_eye);

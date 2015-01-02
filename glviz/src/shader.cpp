@@ -62,55 +62,38 @@ glShader::load_from_cstr(char const* source_cstr)
 }
 
 void
-glShader::compile(std::set<std::string> const& define_list)
+glShader::compile(std::map<std::string, int> const& define_list)
 {
-    std::ostringstream configured_source;
+    // Configure source.
+    std::string source = m_source;
 
-    std::istringstream source_ss(m_source);
-    std::string line;
-
-    // Directives like "#version", "#extension" must occur in the shader
-    // before anything else, except for comments and white space. Thus
-    // insert all defines after the aforementioned directives.
-    while (std::getline(source_ss, line))
-    {
-        std::string token;
-        std::istringstream line_ss(line);
-
-        line_ss >> token;
-
-        // Fails for multi row comments.
-        if (token == "#version"
-            || token == "#extension"
-            || token == "#pragma"
-            || token.length() == 0)
-        {
-            configured_source << line << std::endl;
-        }
-        else
-        {
-            break;
-        }
-    }
-
-    for (std::set<std::string>::const_iterator it = define_list.begin();
+    for (std::map<std::string, int>::const_iterator it = define_list.begin();
         it != define_list.end(); ++it)
     {
-        configured_source << "#define " << *it << std::endl;
+        std::ostringstream define;
+        define << "#define " << it->first;
+
+        std::size_t pos = source.find(define.str(), 0);
+        
+        if (pos != std::string::npos)
+        {
+            std::size_t len = source.find("\n", pos) - pos + 1;
+
+            define << " " << it->second << "\n";
+            source.replace(pos, len, define.str());
+        }
     }
 
-    configured_source << line << std::endl;
-    configured_source << source_ss.rdbuf();
-
     // Compile configured source.
-    const std::string& configured_source_str = configured_source.str();
-    const char* configured_source_cstr = configured_source_str.c_str();
+    const char* source_cstr = source.c_str();
 
-    glShaderSource(m_shader_obj, 1, &configured_source_cstr, NULL);
+    glShaderSource(m_shader_obj, 1, &source_cstr, NULL);
     glCompileShader(m_shader_obj);
 
     if (!is_compiled())
-        throw shader_compilation_error(infolog()); 
+    {
+        throw shader_compilation_error(infolog());
+    }
 }
 
 bool

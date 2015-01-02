@@ -20,7 +20,6 @@
 
 #include <GL/glew.h>
 #include <string>
-#include <set>
 #include <map>
 #include <stdexcept>
 
@@ -65,8 +64,8 @@ public:
     void load_from_file(std::string const& filename);
     void load_from_cstr(char const* source_cstr);
 
-    void compile(std::set<std::string> const& define_list =
-        std::set<std::string>());
+    void compile(std::map<std::string, int> const&
+        define_list = std::map<std::string, int>());
     bool is_compiled() const;
 
     std::string infolog();
