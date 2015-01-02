@@ -141,6 +141,7 @@ glProgram::glProgram()
 
 glProgram::~glProgram()
 {
+    detach_all();
     glDeleteProgram(m_program_obj);
 }
 
@@ -175,6 +176,20 @@ void
 glProgram::detach_shader(glShader& shader)
 {
     glDetachShader(m_program_obj, shader.m_shader_obj);
+}
+
+void
+glProgram::detach_all()
+{
+    GLsizei count;
+    GLuint shader[64];
+
+    glGetAttachedShaders(m_program_obj, 64, &count, shader);
+    
+    for (GLsizei i(0); i < count; ++i)
+    {
+        glDetachShader(m_program_obj, shader[i]);
+    }
 }
 
 bool
@@ -221,6 +236,18 @@ glProgram::infolog()
         infoLog.get());
 
     return std::string(infoLog.get());
+}
+
+void
+glProgram::set_uniform_1i(GLchar const* name, GLint value)
+{
+    GLint location = glGetUniformLocation(m_program_obj, name);
+    if (location == -1)
+    {
+        throw uniform_not_found_error(name);
+    }
+
+    glUniform1i(location, value);
 }
 
 void

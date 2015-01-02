@@ -115,10 +115,13 @@ public:
     void attach_shader(glShader& shader);
     void detach_shader(glShader& shader);
 
+    void detach_all();
+
     bool is_linked();
     bool is_attached(glShader const& shader);
     std::string infolog();
 
+    void set_uniform_1i(GLchar const* name, GLint value);
     void set_uniform_block_binding(GLchar const* name, GLuint block_binding);
 
 protected:

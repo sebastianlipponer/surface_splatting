@@ -33,8 +33,12 @@ TwBar*   twbar();
 Camera*  camera();
 void     set_camera(Camera& camera);
 
-void     display_callback(void());
-void     timer_callback(void (*timer_callback)(int), int delta_t_msec);
+void     display_callback(std::function<void ()> display_callback);
+void     timer_callback(std::function<void (unsigned int)> timer_callback,
+             unsigned int timer_msec);
+void     reshape_callback(std::function<void (int width, int height)>
+             reshape_callback);
+void     close_callback(std::function<void ()> close_callback);
 
 void     cout_opengl_version();
 void     cout_glew_version();

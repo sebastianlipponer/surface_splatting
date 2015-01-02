@@ -44,19 +44,10 @@ ProgramSphere::ProgramSphere()
 void
 ProgramSphere::initialize_shader_obj()
 {
-    try
-    {
-        m_sphere_vs_obj.load_from_cstr(
-            reinterpret_cast<char const*>(sphere_vs_glsl));
-        m_sphere_fs_obj.load_from_cstr(
-            reinterpret_cast<char const*>(sphere_fs_glsl));
-    }
-    catch (file_open_error const& e)
-    {
-        std::cerr << "Error: Failed to open shader file." << std::endl
-            << e.what() << std::endl;
-        std::exit(EXIT_FAILURE);
-    }
+    m_sphere_vs_obj.load_from_cstr(
+        reinterpret_cast<char const*>(sphere_vs_glsl));
+    m_sphere_fs_obj.load_from_cstr(
+        reinterpret_cast<char const*>(sphere_fs_glsl));
 
     attach_shader(m_sphere_vs_obj);
     attach_shader(m_sphere_fs_obj);
@@ -190,21 +181,12 @@ ProgramMesh3::set_smooth(bool enable)
 void
 ProgramMesh3::initialize_shader_obj()
 {
-    try
-    {
-        m_mesh3_vs_obj.load_from_cstr(
-            reinterpret_cast<char const*>(mesh3_vs_glsl));
-        m_mesh3_gs_obj.load_from_cstr(
-            reinterpret_cast<char const*>(mesh3_gs_glsl));
-        m_mesh3_fs_obj.load_from_cstr(
-            reinterpret_cast<char const*>(mesh3_fs_glsl));
-    }
-    catch (file_open_error const& e)
-    {
-        std::cerr << "Error: Failed to open shader file." << std::endl
-            << e.what() << std::endl;
-        std::exit(EXIT_FAILURE);
-    }
+    m_mesh3_vs_obj.load_from_cstr(
+        reinterpret_cast<char const*>(mesh3_vs_glsl));
+    m_mesh3_gs_obj.load_from_cstr(
+        reinterpret_cast<char const*>(mesh3_gs_glsl));
+    m_mesh3_fs_obj.load_from_cstr(
+        reinterpret_cast<char const*>(mesh3_fs_glsl));
 
     attach_shader(m_mesh3_vs_obj);
     attach_shader(m_mesh3_gs_obj);

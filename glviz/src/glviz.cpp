@@ -20,7 +20,7 @@
 #include "camera.hpp"
 
 #include <GL/glew.h>
-#include <GL/freeglut.h>
+#include <SDL/SDL.h>
 #include <AntTweakBar.h>
 
 #include <iostream>
@@ -35,25 +35,18 @@ namespace
 
 int m_opengl_major_version(3), m_opengl_minor_version(3);
 int m_screen_width(1280), m_screen_height(720);
+unsigned int m_timer_msec = 16;
 
-bool m_lmb_down(false), m_mmb_down(false), m_rmb_down(false);
+SDL_Window* m_sdl_window;
+SDL_GLContext m_gl_context;
 
-std::function<void ()>    m_display_callback;
-std::function<void (int)> m_timer_callback;
+std::function<void ()>                      m_display_callback;
+std::function<void (unsigned int)>          m_timer_callback;
+std::function<void(int width, int height)>  m_reshape_callback;
+std::function<void ()>                      m_close_callback;
 
 TwBar*   m_bar;
 Camera*  m_camera;
-
-void
-displayFunc()
-{
-    m_display_callback();
-
-    TwDraw();
-
-    glutSwapBuffers();
-    glutPostRedisplay();
-}
 
 void
 reshapeFunc(int width, int height)
@@ -61,11 +54,10 @@ reshapeFunc(int width, int height)
     m_screen_width  = width;
     m_screen_height = height;
 
-    const float aspect = static_cast<float>(m_screen_width) /
-        static_cast<float>(m_screen_height);
-
-    glViewport(0, 0, m_screen_width, m_screen_height);
-    m_camera->set_perspective(60.0f, aspect, 0.005f, 5.0f);
+    if (m_reshape_callback)
+    {
+        m_reshape_callback(width, height);
+    }
 
     TwWindowSize(m_screen_width, m_screen_height);
 }
@@ -73,65 +65,89 @@ reshapeFunc(int width, int height)
 void
 mouseFunc(int button, int state, int x, int y)
 {
-    if (!TwEventMouseButtonGLUT(button, state, x, y))
+    const float xf = static_cast<float>(x)
+        / static_cast<float>(m_screen_width);
+    const float yf = static_cast<float>(y)
+        / static_cast<float>(m_screen_height);
+
+    switch (button)
     {
-        float xf = static_cast<float>(x) / static_cast<float>(m_screen_width);
-        float yf = static_cast<float>(y) / static_cast<float>(m_screen_height);
-
-        if (button == GLUT_LEFT_BUTTON)
-        {
-            m_lmb_down = (state == GLUT_DOWN) ? true : false;
+        case SDL_BUTTON_LEFT:
             m_camera->trackball_begin_motion(xf, yf);
-        }
+            break;
 
-        if (button == GLUT_RIGHT_BUTTON)
-        {
-            m_rmb_down = (state == GLUT_DOWN) ? true : false;
+        case SDL_BUTTON_RIGHT:
             m_camera->trackball_begin_motion(xf, yf);
-        }
+            break;
 
-        if (button == GLUT_MIDDLE_BUTTON)
-        {
-            m_mmb_down = (state == GLUT_DOWN) ? true : false;
+        case SDL_BUTTON_MIDDLE:
             m_camera->trackball_begin_motion(xf, yf);
-        }
+            break;
     }
 }
 
 void
-motionFunc(int x, int y)
+motionFunc(int state, int x, int y)
 {
-    if (!TwEventMouseMotionGLUT(x, y))
-    {
-        float xf = static_cast<float>(x) / static_cast<float>(m_screen_width);
-        float yf = static_cast<float>(y) / static_cast<float>(m_screen_height);
+    const float xf = static_cast<float>(x)
+        / static_cast<float>(m_screen_width);
+    const float yf = static_cast<float>(y)
+        / static_cast<float>(m_screen_height);
 
-        if (m_lmb_down)
-        {
-            m_camera->trackball_end_motion_rotate(xf, yf);
-        }
-        else if (m_rmb_down)
-        {
-            m_camera->trackball_end_motion_zoom(xf, yf);
-        }
-        else if (m_mmb_down)
-        {
-            m_camera->trackball_end_motion_translate(xf, yf);
-        }
+    if (state & SDL_BUTTON_LMASK)
+    {
+        m_camera->trackball_end_motion_rotate(xf, yf);
+    }
+    else if (state & SDL_BUTTON_RMASK)
+    {
+        m_camera->trackball_end_motion_zoom(xf, yf);
+    }
+    else if (state & SDL_BUTTON_MMASK)
+    {
+        m_camera->trackball_end_motion_translate(xf, yf);
     }
 }
 
-void
-timerFunc(int delta_t_msec)
+bool
+process_events()
 {
-    m_timer_callback(delta_t_msec);
-    glutTimerFunc(delta_t_msec, timerFunc, delta_t_msec);
-}
+    bool quit = false;
+    SDL_Event event;
 
-void
-terminateFunc()
-{
-    TwTerminate();
+    while (SDL_PollEvent(&event))
+    {
+        if (TwEventSDL(&event, SDL_MAJOR_VERSION, SDL_MINOR_VERSION))
+            continue;
+
+        switch (event.type)
+        {
+            case SDL_KEYDOWN:
+                break;
+            case SDL_KEYUP:
+                break;
+            case SDL_WINDOWEVENT:
+                if (event.window.event == SDL_WINDOWEVENT_RESIZED)
+                    reshapeFunc(event.window.data1, event.window.data2);
+                break;
+            case SDL_MOUSEBUTTONUP:
+                SDL_CaptureMouse(SDL_FALSE);
+                break;
+            case SDL_MOUSEBUTTONDOWN:
+                SDL_CaptureMouse(SDL_TRUE);
+                mouseFunc(event.button.button, event.button.state,
+                    event.button.x, event.button.y);
+                break;
+            case SDL_MOUSEMOTION:
+                motionFunc(event.motion.state, event.motion.x,
+                    event.motion.y);
+                break;
+            case SDL_QUIT:
+                quit = true;
+                break;
+        }
+    }
+
+    return quit;
 }
 
 }
@@ -167,16 +183,29 @@ twbar()
 }
 
 void
-display_callback(void (*display_callback)())
+display_callback(std::function<void ()> display_callback)
 {
     m_display_callback = display_callback;
 }
 
 void
-timer_callback(void (*timer_callback)(int), int delta_t_msec)
+timer_callback(std::function<void (unsigned int)> timer_callback,
+    unsigned int timer_msec)
 {
     m_timer_callback = timer_callback;
-    glutTimerFunc(delta_t_msec, timerFunc, delta_t_msec);
+    m_timer_msec = timer_msec;
+}
+
+void
+reshape_callback(std::function<void(int width, int height)> reshape_callback)
+{
+    m_reshape_callback = reshape_callback;
+}
+
+void
+close_callback(std::function<void ()> close_callback)
+{
+    m_close_callback = close_callback;
 }
 
 void
@@ -193,13 +222,13 @@ cout_opengl_version()
 
     switch (context_profile)
     {
-    case GL_CONTEXT_CORE_PROFILE_BIT:
-        std::cout << "core";
-        break;
+        case GL_CONTEXT_CORE_PROFILE_BIT:
+            std::cout << "core";
+            break;
 
-    case GL_CONTEXT_COMPATIBILITY_PROFILE_BIT:
-        std::cout << "compatibility";
-        break;
+        case GL_CONTEXT_COMPATIBILITY_PROFILE_BIT:
+            std::cout << "compatibility";
+            break;
     }
 
     std::cout << " profile context." << std::endl;
@@ -215,14 +244,53 @@ cout_glew_version()
 void
 init(int argc, char* argv[])
 {
-    // Initialize GLUT.
-    glutInit(&argc, argv);
-    glutInitContextVersion(m_opengl_major_version, m_opengl_minor_version);
-    glutInitContextProfile(GLUT_COMPATIBILITY_PROFILE);
+    // Initialize SDL.
+    if (SDL_Init(SDL_INIT_VIDEO) < 0)
+    {
+        std::cerr << "Failed to initialize SDL Video:" << std::endl;
+        std::cerr << "Error: " << SDL_GetError() << std::endl;
+        SDL_Quit();
+        std::exit(EXIT_FAILURE);
+    }
 
-    glutInitDisplayMode(GLUT_DEPTH | GLUT_DOUBLE | GLUT_RGBA | GLUT_MULTISAMPLE);
-    glutInitWindowSize(m_screen_width, m_screen_height);
-    glutCreateWindow("GLviz");
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK,
+        SDL_GL_CONTEXT_PROFILE_CORE);
+
+    //SDL_GL_SetAttribute(SDL_GL_RED_SIZE,   8);
+    //SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 8);
+    //SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE,  8);
+    //SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE, 8);
+
+    //SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+    //SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
+
+    SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 1);
+    SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 4);
+
+    m_sdl_window = SDL_CreateWindow("GLviz",
+        SDL_WINDOWPOS_UNDEFINED,
+        SDL_WINDOWPOS_UNDEFINED,
+        m_screen_width, m_screen_height,
+        SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
+
+    if (!m_sdl_window)
+    {
+        std::cerr << "Failed to create SDL window:" << std::endl;
+        std::cerr << "Error: " << SDL_GetError() << std::endl;
+        SDL_Quit();
+        std::exit(EXIT_FAILURE);
+    }
+
+    m_gl_context = SDL_GL_CreateContext(m_sdl_window);
+    if (!m_gl_context)
+    {
+        std::cerr << "Failed to initialize OpenGL:" << std::endl;
+        std::cerr << "Error: " << SDL_GetError() << std::endl;
+        SDL_Quit();
+        std::exit(EXIT_FAILURE);
+    }
 
     // Print OpenGL version.
     cout_opengl_version();
@@ -242,10 +310,11 @@ init(int argc, char* argv[])
 
     // Print GLEW version.
     cout_glew_version();
+    std::cout << std::endl;
 
     // Initialize AntTweakBar.
     {
-        int tw_init_ok = TwInit(TW_OPENGL, NULL);
+        int tw_init_ok = TwInit(TW_OPENGL_CORE, NULL);
 
         if (!tw_init_ok)
         {
@@ -257,31 +326,52 @@ init(int argc, char* argv[])
         TwWindowSize(m_screen_width, m_screen_height);
 
         TwDefine(" GLOBAL help='some useful text' ");
-        TwDefine(" TweakBar size='275 400' color='100 100 100' refresh=0.01 ");
+        TwDefine(" TweakBar size='275 400' color='100 100 100' \
+            refresh=0.01 ");
     }
-
-    atexit(terminateFunc);
-
-    // Initialize GLUT callbacks.
-    glutDisplayFunc(displayFunc);
-    glutReshapeFunc(reshapeFunc);
-
-    glutMouseFunc(mouseFunc);
-    glutMotionFunc(motionFunc);
-    glutPassiveMotionFunc(motionFunc);
-
-    glutKeyboardFunc((GLUTkeyboardfun)TwEventKeyboardGLUT);
-    glutSpecialFunc((GLUTspecialfun)TwEventSpecialGLUT);
-
-    TwGLUTModifiersFunc(glutGetModifiers);
 }
 
 int
 exec(Camera& camera)
 {
     m_camera = &camera;
+    Uint32 last_time = 0;
 
-    glutMainLoop();
+    reshapeFunc(m_screen_width, m_screen_height);
+
+    while (!process_events())
+    {
+        if (m_timer_callback)
+        {
+            const Uint32 time = SDL_GetTicks();
+            const Uint32 delta_t_msec = time - last_time;
+
+            if (delta_t_msec >= m_timer_msec)
+            {
+                last_time = time;
+                m_timer_callback(delta_t_msec);
+            }
+        }
+
+        if (m_display_callback)
+        {
+            m_display_callback();
+        }
+
+        TwDraw();
+        SDL_GL_SwapWindow(m_sdl_window);
+    }
+
+    TwTerminate();
+    if (m_close_callback)
+    {
+        m_close_callback();
+    }
+
+    SDL_GL_DeleteContext(m_gl_context);
+    SDL_DestroyWindow(m_sdl_window);
+    SDL_Quit();
+
     return EXIT_SUCCESS;
 }
 

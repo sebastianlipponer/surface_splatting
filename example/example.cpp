@@ -227,6 +227,22 @@ displayFunc()
 }
 
 void
+reshapeFunc(int width, int height)
+{
+    const float aspect = static_cast<float>(width) /
+        static_cast<float>(height);
+
+    glViewport(0, 0, width, height);
+    camera.set_perspective(60.0f, aspect, 0.005f, 5.0f);
+}
+
+void
+closeFunc()
+{
+    viz = nullptr;
+}
+
+void
 timerFunc(int delta_t_msec)
 {
     float delta_t_sec = static_cast<float>(delta_t_msec) / 1000.0f;
@@ -475,6 +491,8 @@ main(int argc, char* argv[])
     }
 
     GLviz::display_callback(displayFunc);
+    GLviz::reshape_callback(reshapeFunc);
+    GLviz::close_callback(closeFunc);
     GLviz::timer_callback(timerFunc, 15);
 
     return GLviz::exec(camera);
