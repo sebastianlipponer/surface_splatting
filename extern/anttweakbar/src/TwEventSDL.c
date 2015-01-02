@@ -18,6 +18,7 @@
 
 int TW_CALL TwEventSDL12(const void *sdlEvent); // implemented in TwEventSDL12.c
 int TW_CALL TwEventSDL13(const void *sdlEvent); // implmeneted in TwEventSDL13.c
+int TW_CALL TwEventSDL20(const void *sdlEvent); // implemented in TwEventSDL20.c
 #ifdef  __cplusplus
     extern "C" { int TW_CALL TwSetLastError(const char *staticErrorMessage); }
 #else
@@ -38,6 +39,8 @@ int TW_CALL TwEventSDL(const void *sdlEvent, unsigned char majorVersion, unsigne
     }
     else if (majorVersion == 1 && minorVersion == 2)
         return TwEventSDL12(sdlEvent);
-    else // if( majorVersion==1 && minorVersion==3 ) 
-        return TwEventSDL13(sdlEvent); // will probably not work for version > 1.3, but give it a chance
+    else if (majorVersion == 1 && minorVersion == 3) 
+        return TwEventSDL13(sdlEvent);
+    else //if (majorVersion == 2 && minorVersion == 0)
+        return TwEventSDL20(sdlEvent);
 }
