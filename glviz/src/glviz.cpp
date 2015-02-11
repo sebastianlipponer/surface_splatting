@@ -16,6 +16,7 @@
 // along with GLviz. If not, see <http://www.gnu.org/licenses/>.
 
 #include "glviz.hpp"
+#include "utility.hpp"
 
 #include "camera.hpp"
 
@@ -298,13 +299,23 @@ init(int argc, char* argv[])
     // Initialize GLEW.
     {
         glewExperimental = GL_TRUE;
-        GLenum error = glewInit();
-
-        if (GLEW_OK != error)
+        GLenum glew_error = glewInit();
+        
+        if (GLEW_OK != glew_error)
         {
             std::cerr << "Failed to initialize GLEW:" << std::endl;
-            std::cerr << "Error: " << glewGetErrorString(error) << std::endl;
+            std::cerr << __FILE__ << "(" << __LINE__ << "): "
+                      << glewGetErrorString(glew_error) << std::endl;
             std::exit(EXIT_FAILURE);
+        }
+
+        // GLEW has a problem with core contexts. It calls
+        // glGetString(GL_EXTENSIONS), which causes a GL_INVALID_ENUM error.
+        GLenum gl_error = glGetError();
+        if (GL_NO_ERROR != gl_error && GL_INVALID_ENUM != gl_error)
+        {
+            std::cerr << __FILE__ << "(" << __LINE__ << "): "
+                      << GLviz::get_gl_error_string(gl_error) << std::endl;
         }
     }
 

@@ -174,10 +174,6 @@ std::vector<Eigen::Vector3f>               m_vertices;
 std::vector<Eigen::Vector3f>               m_normals;
 std::vector<std::array<unsigned int, 3> >  m_faces;
 
-
-void load_raw(std::string const& filename);
-void save_raw(std::string const& filename);
-void set_vertex_normals_from_triangle_mesh();
 void load_triangle_mesh(std::string const& filename);
 
 void
@@ -266,118 +262,14 @@ timerFunc(int delta_t_msec)
                 * m_ref_normals[i];
         }
 
-        set_vertex_normals_from_triangle_mesh();
+        GLviz::set_vertex_normals_from_triangle_mesh(
+            m_vertices, m_faces, m_normals);
     }
 }
 
 void TW_CALL reset_simulation(void*)
 {
     g_time = 0.0f;
-}
-
-void
-load_raw(std::string const& filename)
-{
-    std::ifstream input(filename, std::ios::in | std::ios::binary);
-
-    if (input.fail())
-    {
-        std::ostringstream error_message;
-        error_message << "Error: Can not open "
-            << filename << "." << std::endl;
-
-        throw std::runtime_error(error_message.str().c_str());
-    }
-
-    unsigned int nv;
-    input.read(reinterpret_cast<char*>(&nv), sizeof(unsigned int));
-    m_vertices.resize(nv);
-
-    for (unsigned int i(0); i < nv; ++i)
-    {
-        input.read(reinterpret_cast<char*>(m_vertices[i].data()),
-            3 * sizeof(float));
-    }
-
-    unsigned int nf;
-    input.read(reinterpret_cast<char*>(&nf), sizeof(unsigned int));
-    m_faces.resize(nf);
-
-    for (unsigned int i(0); i < nf; ++i)
-    {
-        input.read(reinterpret_cast<char*>(m_faces[i].data()),
-            3 * sizeof(unsigned int));
-    }
-
-    input.close();
-}
-
-void
-save_raw(std::string const& filename)
-{
-    std::ofstream output(filename, std::ios::out | std::ios::binary);
-
-    if (output.fail())
-    {
-        std::ostringstream error_message;
-        error_message << "Error: Can not open "
-                      << filename << "." << std::endl;
-
-        throw std::runtime_error(error_message.str().c_str());
-    }
-
-    unsigned int nv = static_cast<unsigned int>(m_vertices.size());
-    output.write(reinterpret_cast<char const*>(&nv), sizeof(unsigned int));
-
-    for (unsigned int i(0); i < nv; ++i)
-    {
-        output.write(reinterpret_cast<char const*>(m_vertices[i].data()),
-            3 * sizeof(float));
-    }
-
-    unsigned int nf = static_cast<unsigned int>(m_faces.size());
-    output.write(reinterpret_cast<char const*>(&nf), sizeof(unsigned int));
-
-    for (unsigned int i(0); i < nf; ++i)
-    {
-        output.write(reinterpret_cast<char const*>(m_faces[i].data()),
-            3 * sizeof(unsigned int));
-    }
-
-    output.close();
-}
-
-void
-set_vertex_normals_from_triangle_mesh()
-{
-    unsigned int nf(static_cast<unsigned int>(m_faces.size())),
-        nv(static_cast<unsigned int>(m_vertices.size()));
-
-    m_normals.resize(m_vertices.size());
-    std::fill(m_normals.begin(), m_normals.end(), Vector3f::Zero());
-
-    for (unsigned int i(0); i < nf; ++i)
-    {
-        std::array<unsigned int, 3> const& f_i = m_faces[i];
-
-        Vector3f const& p0(m_vertices[f_i[0]]);
-        Vector3f const& p1(m_vertices[f_i[1]]);
-        Vector3f const& p2(m_vertices[f_i[2]]);
-
-        Vector3f n_i = (p0 - p1).cross(p0 - p2);
-
-        m_normals[f_i[0]] += n_i;
-        m_normals[f_i[1]] += n_i;
-        m_normals[f_i[2]] += n_i;
-    }
-
-    for (unsigned int i(0); i < nv; ++i)
-    {
-        if (!m_normals[i].isZero())
-        {
-            m_normals[i].normalize();
-        }
-    }
 }
 
 void
@@ -389,7 +281,7 @@ load_triangle_mesh(std::string const& filename)
     if (input.good())
     {
         input.close();
-        load_raw(filename);
+        GLviz::load_raw(filename, m_vertices, m_faces);
     }
     else
     {
@@ -398,14 +290,15 @@ load_triangle_mesh(std::string const& filename)
         std::ostringstream fqfn;
         fqfn << path_resources;
         fqfn << filename;
-        load_raw(fqfn.str());
+        GLviz::load_raw(fqfn.str(), m_vertices, m_faces);
     }
 
     std::cout << "  #vertices " << m_vertices.size() << std::endl;
     std::cout << "  #faces    " << m_faces.size() << std::endl;
 
-    set_vertex_normals_from_triangle_mesh();
-    
+    GLviz::set_vertex_normals_from_triangle_mesh(
+        m_vertices, m_faces, m_normals);
+
     m_ref_vertices = m_vertices;
     m_ref_normals = m_normals;
 }

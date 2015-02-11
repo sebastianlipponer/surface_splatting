@@ -23,6 +23,7 @@ set(SOURCES
     src/trackball.cpp
     src/program.cpp
     src/buffer.cpp
+    src/utility.cpp
 )
 
 set(HEADERS
@@ -32,6 +33,7 @@ set(HEADERS
     src/trackball.hpp
     src/program.hpp
     src/buffer.hpp
+    src/utility.hpp
 )
 
 # Use static anttweakbar.
