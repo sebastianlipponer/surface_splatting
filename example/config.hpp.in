@@ -1,1 +1,0 @@
-const char* path_resources = R"(${GLVIZ_RESOURCES_DIR})";

@@ -22,4 +22,3 @@ set(LIBRARY_OUTPUT_PATH    "${PROJECT_BINARY_DIR}/bin")
 
 add_subdirectory(extern)
 add_subdirectory(glviz)
-add_subdirectory(example)
