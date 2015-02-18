@@ -138,10 +138,8 @@ struct MyViz
         program_mesh3.unuse();
     }
 
-
     void draw_spheres(GLsizei nv)
     {
-        glEnable(GL_POINT_SPRITE);
         glEnable(GL_PROGRAM_POINT_SIZE);
         glPointParameterf(GL_POINT_SPRITE_COORD_ORIGIN, GL_LOWER_LEFT);
 
