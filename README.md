@@ -1,12 +1,16 @@
 # Surface Splatting
 
-This demo implements a point rendering and texture filtering technique called *Surface Splatting*<sup>1</sup>. More specifically, it implements the GPU accelerated surface splatting approach by Botsch et al.<sup>2</sup> using OpenGL 3.3 (core profile). This basically comprises a raycasting based rasterization of elliptical splats, a deferred shading pipeline and an approximation to the original EWA filter<sup>1</sup>. The demo has been tested on a NVIDIA GTX 680 GPU using driver version 347.52 on Windows (compiled with MSVC 2013) and 340.65 on Linux (compiled with GCC 4.9). It is built on top of [GLviz](https://github.com/sebastianlipponer/glviz) and is therefore rather simple to compile.
+This demo implements a point rendering and texture filtering technique called *Surface Splatting*<sup>1</sup>. More specifically, it implements the GPU accelerated surface splatting approach by Botsch et al.<sup>2</sup> using OpenGL 3.3 (core profile). This basically comprises a raycasting based rasterization of elliptical splats, a deferred shading pipeline and an approximation to the original EWA filter<sup>1</sup>. The demo has been tested on a NVIDIA GTX 1080 Ti GPU using driver version 436.02 on Windows 10 (compiled with MSVC 2019) and 418.74 on Linux (compiled with GCC 8.3). It is built on top of [GLviz](https://github.com/sebastianlipponer/glviz) and is therefore rather simple to compile.
 
 **Author**: [Sebastian Lipponer](http://sebastianlipponer.de), **License**: GPL v3
 
 [![](http://sebastianlipponer.github.io/surface_splatting/dragon_thumbnail.png)](http://sebastianlipponer.github.io/surface_splatting/dragon.png)[![](http://sebastianlipponer.github.io/surface_splatting/dragon_splats_tail_thumbnail.png)](http://sebastianlipponer.github.io/surface_splatting/dragon_splats_tail.png)
 
 _**Left**: Surface splatting of the Stanford Dragon model. **Right**: Closeup showing artificially shrunk splats to illustrate the splat distribution._
+
+## Build
+
+Before running CMake run either build-extern.cmd or build-extern.sh to download and build the necessary external dependencies in the .extern directory.
 
 ## Basic Principle
 
