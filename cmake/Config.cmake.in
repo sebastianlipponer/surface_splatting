@@ -1,0 +1,11 @@
+@PACKAGE_INIT@
+
+include(CMakeFindDependencyMacro)
+
+find_dependency(SDL2 CONFIG)
+find_dependency(Eigen3 CONFIG)
+find_dependency(glew CONFIG)
+find_dependency(ImGui CONFIG)
+
+include("${CMAKE_CURRENT_LIST_DIR}/@TARGETS_EXPORT_NAME@.cmake")
+check_required_components("@PROJECT_NAME@")
