@@ -545,7 +545,7 @@ main(int argc, char* argv[])
 
     try
     {
-        load_triangle_mesh("stanford_dragon_v40k_f80k.raw");
+        load_triangle_mesh("stanford_dragon_v344k_f688k.raw");
     }
     catch(std::runtime_error const& e)
     {
