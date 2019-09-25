@@ -1,5 +1,0 @@
-#include "../src/glviz.hpp"
-#include "../src/buffer.hpp"
-#include "../src/program.hpp"
-#include "../src/shader.hpp"
-#include "../src/utility.hpp"
