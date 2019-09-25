@@ -32,6 +32,8 @@
 #include <array>
 #include <exception>
 
+#include <thread>
+
 using namespace Eigen;
 
 namespace
@@ -411,48 +413,65 @@ hsv2rgb(float h, float s, float v, float& r, float& g, float& b)
 }
 
 void
+face_to_surfel(std::vector<Eigen::Vector3f> const& vertices,
+    std::array<unsigned int, 3> const& face, Surfel& surfel)
+{
+    Vector3f v[3] = {
+        vertices[face[0]],
+        vertices[face[1]],
+        vertices[face[2]]
+    };
+
+    Vector3f p0, t1, t2;
+    steiner_circumellipse(
+        v[0].data(), v[1].data(), v[2].data(),
+        p0.data(), t1.data(), t2.data()
+    );
+
+    Vector3f n_s = t1.cross(t2);
+    Vector3f n_t = (v[1] - v[0]).cross(v[2] - v[0]);
+
+    if (n_t.dot(n_s) < 0.0f)
+    {
+        t1.swap(t2);
+    }
+
+    surfel.c = p0;
+    surfel.u = t1;
+    surfel.v = t2;
+    surfel.p = Vector3f::Zero();
+
+    float h = std::min((std::abs(p0.x()) / 0.45f) * 360.0f, 360.0f);
+    float r, g, b;
+    hsv2rgb(h, 1.0f, 1.0f, r, g, b);
+    surfel.rgba = static_cast<unsigned int>(r * 255.0f)
+        | (static_cast<unsigned int>(g * 255.0f) << 8)
+        | (static_cast<unsigned int>(b * 255.0f) << 16);
+}
+
+void
 mesh_to_surfel(std::vector<Eigen::Vector3f> const& vertices,
     std::vector<std::array<unsigned int, 3>> const& faces,
     std::vector<Surfel>& surfels)
 {
     surfels.resize(faces.size());
 
-    for (unsigned int i(0); i < static_cast<unsigned int>(
-        faces.size()); ++i)
+    std::vector<std::thread> threads(std::thread::hardware_concurrency());
+
+    for (std::size_t i(0); i < threads.size(); ++i)
     {
-        std::array<unsigned int, 3> face = faces[i];
-        Vector3f v[3] = {
-            vertices[face[0]],
-            vertices[face[1]],
-            vertices[face[2]]
-        };
+        std::size_t b = i * faces.size() / threads.size();
+        std::size_t e = (i + 1) * faces.size() / threads.size();
 
-        Vector3f p0, t1, t2;
-        steiner_circumellipse(
-            v[0].data(), v[1].data(), v[2].data(),
-            p0.data(), t1.data(), t2.data()
-        );
-
-        Vector3f n_s = t1.cross(t2);
-        Vector3f n_t = (v[1] - v[0]).cross(v[2] - v[0]);
-
-        if (n_t.dot(n_s) < 0.0f)
-        {
-            t1.swap(t2);
-        }
-
-        surfels[i].c = p0;
-        surfels[i].u = t1;
-        surfels[i].v = t2;
-        surfels[i].p = Vector3f::Zero();
-
-        float h = std::min((std::abs(p0.x()) / 0.45f) * 360.0f, 360.0f);
-        float r, g, b;
-        hsv2rgb(h, 1.0f, 1.0f, r, g, b);
-        surfels[i].rgba = static_cast<unsigned int>(r * 255.0f)
-            | (static_cast<unsigned int>(g * 255.0f) << 8)
-            | (static_cast<unsigned int>(b * 255.0f) << 16);
+        threads[i] = std::thread([b, e, &vertices, &faces, &surfels]() {
+            for (std::size_t j = b; j < e; ++j)
+            {
+                face_to_surfel(vertices, faces[j], surfels[j]);
+            }
+        });
     }
+
+    for (auto& t : threads) { t.join(); }
 }
 
 void
