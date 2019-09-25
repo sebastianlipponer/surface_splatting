@@ -17,7 +17,8 @@
 
 #include "splat_renderer.hpp"
 
-#include <GLviz>
+#include <GLviz/glviz.hpp>
+#include <GLviz/utility.hpp>
 
 #include <iostream>
 #include <cmath>
@@ -85,7 +86,7 @@ SplatRenderer::SplatRenderer(GLviz::Camera const& camera)
     : m_camera(camera), m_soft_zbuffer(true), m_smooth(false),
       m_color_material(true), m_ewa_filter(false), m_multisample(false),
       m_pointsize_method(0), m_backface_culling(false),
-      m_color(Vector3f(0.0, 0.25f, 1.0f)), m_epsilon(5.0f * 1e-3f),
+      m_color(Vector3f(0.0, 0.25f, 1.0f)), m_epsilon(1.0f * 1e-3f),
       m_shininess(8.0f), m_radius_scale(1.0f), m_ewa_radius(1.0f)
 {
     m_uniform_camera.bind_buffer_base(0);

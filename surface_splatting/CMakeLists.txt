@@ -7,11 +7,15 @@ add_definitions(-DGLEW_STATIC)
 # Use static freeglut.
 add_definitions(-DFREEGLUT_LIB_PRAGMAS=0 -DFREEGLUT_STATIC)
 
+find_package(GLviz REQUIRED CONFIG)
+
 file(TO_NATIVE_PATH "${PROJECT_SOURCE_DIR}/resources/" GLVIZ_RESOURCES_DIR)
 configure_file(config.hpp.in "${CMAKE_CURRENT_BINARY_DIR}/config.hpp")
 
 file(GLOB OPENGL_SHADERS shader/*)
-shader_wrap_cpp(SOURCES_OPENGL_SHADERS "${OPENGL_SHADERS}")
+
+include(GLvizShaderWrapCpp)
+glviz_shader_wrap_cpp(SOURCES_OPENGL_SHADERS ${OPENGL_SHADERS})
 
 add_executable(surface_splatting
     main.cpp
@@ -32,10 +36,6 @@ include_directories(
     ${glviz_INCLUDE_DIRS}
 )
 
-add_dependencies(surface_splatting
-    glviz
-)
-
 target_link_libraries(surface_splatting
-    ${glviz_LIBRARIES}
+    GLviz::glviz
 )

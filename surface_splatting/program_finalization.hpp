@@ -18,7 +18,7 @@
 #ifndef PROGRAM_FINALIZATION_HPP
 #define PROGRAM_FINALIZATION_HPP
 
-#include <GLviz>
+#include <GLviz/program.hpp>
 
 class ProgramFinalization : public glProgram
 {

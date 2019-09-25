@@ -1,6 +1,6 @@
 // This file is part of Surface Splatting.
 //
-// Copyright (C) 2010, 2015 by Sebastian Lipponer.
+// Copyright (C) 2010-2018 by Sebastian Lipponer.
 // 
 // Surface Splatting is free software: you can redistribute it and / or modify
 // it under the terms of the GNU General Public License as published by
@@ -15,7 +15,8 @@
 // You should have received a copy of the GNU General Public License
 // along with Surface Splatting. If not, see <http://www.gnu.org/licenses/>.
 
-#include <GLviz>
+#include <GLviz/glviz.hpp>
+#include <GLviz/utility.hpp>
 
 #include "splat_renderer.hpp"
 
@@ -36,135 +37,20 @@ using namespace Eigen;
 namespace
 {
 
-GLviz::Camera camera;
-unsigned int g_model(1);
-std::unique_ptr<SplatRenderer> viz;
+GLviz::Camera g_camera;
 
-std::vector<Eigen::Vector3f>               m_ref_vertices;
-std::vector<Eigen::Vector3f>               m_ref_normals;
+int g_model(1);
 
-std::vector<Eigen::Vector3f>               m_vertices;
-std::vector<std::array<unsigned int, 3> >  m_faces;
-std::vector<Eigen::Vector3f>               m_normals;
+std::unique_ptr<SplatRenderer>  viz;
+std::vector<Surfel>             g_surfels;
 
-std::vector<Surfel>  m_surfels;
+void load_triangle_mesh(std::string const& filename, std::vector<
+    Eigen::Vector3f>& vertices, std::vector<std::array<
+    unsigned int, 3>>& faces);
 
-void load_triangle_mesh(std::string const& filename);
-
-void
-displayFunc()
-{
-    viz->render_frame(m_surfels);
-}
-
-void
-reshapeFunc(int width, int height)
-{
-    const float aspect = static_cast<float>(width) /
-        static_cast<float>(height);
-
-    glViewport(0, 0, width, height);
-    camera.set_perspective(60.0f, aspect, 0.005f, 5.0f);
-
-    viz->reshape(width, height);
-}
-
-void
-closeFunc()
-{
-    viz = nullptr;
-}
-
-void
-load_triangle_mesh(std::string const& filename)
-{
-    std::cout << "\nRead " << filename << "." << std::endl;
-    std::ifstream input(filename);
-
-    if (input.good())
-    {
-        input.close();
-        GLviz::load_raw(filename, m_vertices, m_faces);
-    }
-    else
-    {
-        input.close();
-
-        std::ostringstream fqfn;
-        fqfn << path_resources;
-        fqfn << filename;
-        GLviz::load_raw(fqfn.str(), m_vertices, m_faces);
-    }
-
-    std::cout << "  #vertices " << m_vertices.size() << std::endl;
-    std::cout << "  #faces    " << m_faces.size() << std::endl;
-
-    GLviz::set_vertex_normals_from_triangle_mesh(
-        m_vertices, m_faces, m_normals);
-
-    m_ref_vertices = m_vertices;
-    m_ref_normals = m_normals;
-}
-
-void
-steiner_circumellipse(float const* v0_ptr, float const* v1_ptr,
-    float const* v2_ptr, float* p0_ptr, float* t1_ptr, float* t2_ptr)
-{
-    Matrix2f Q;
-    Vector3f d0, d1, d2;
-    {
-        Map<const Vector3f> v[3] = { v0_ptr, v1_ptr, v2_ptr };
-
-        d0 = v[1] - v[0];
-        d0.normalize();
-
-        d1 = v[2] - v[0];
-        d1 = d1 - d0 * d0.dot(d1);
-        d1.normalize();
-
-        d2 = (1.0f / 3.0f) * (v[0] + v[1] + v[2]);
-
-        Vector2f p[3];
-        for (unsigned int j(0); j < 3; ++j)
-        {
-            p[j] = Vector2f(
-                d0.dot(v[j] - d2),
-                d1.dot(v[j] - d2)
-                );
-        }
-
-        Matrix3f A;
-        for (unsigned int j(0); j < 3; ++j)
-        {
-            A.row(j) = Vector3f(
-                p[j].x() * p[j].x(),
-                2.0f * p[j].x() * p[j].y(),
-                p[j].y() * p[j].y()
-                );
-        }
-
-        FullPivLU<Matrix3f> lu(A);
-        Vector3f res = lu.solve(Vector3f::Ones());
-
-        Q(0, 0) = res(0);
-        Q(1, 1) = res(2);
-        Q(0, 1) = Q(1, 0) = res(1);
-    }
-
-    Map<Vector3f> p0(p0_ptr), t1(t1_ptr), t2(t2_ptr);
-    {
-        SelfAdjointEigenSolver<Matrix2f> es;
-        es.compute(Q);
-
-        Vector2f const& l = es.eigenvalues();
-        Vector2f const& e0 = es.eigenvectors().col(0);
-        Vector2f const& e1 = es.eigenvectors().col(1);
-
-        p0 = d2;
-        t1 = (1.0f / std::sqrt(l.x())) * (d0 * e0.x() + d1 * e0.y());
-        t2 = (1.0f / std::sqrt(l.y())) * (d0 * e1.x() + d1 * e1.y());
-    }
-}
+void mesh_to_surfel(std::vector<Eigen::Vector3f> const& vertices,
+    std::vector<std::array<unsigned int, 3>> const& faces,
+    std::vector<Surfel>& surfels);
 
 void
 load_plane(unsigned int n)
@@ -177,7 +63,7 @@ load_plane(unsigned int n)
              Vector3f::Zero(),
              0);
 
-    m_surfels.resize(4 * n * n);
+    g_surfels.resize(4 * n * n);
     unsigned int m(0);
 
     for (unsigned int i(0); i <= 2 * n; ++i)
@@ -193,46 +79,46 @@ load_plane(unsigned int n)
                     -1.0f + 2.0f * d * static_cast<float>(i),
                     0.0f);
                 s.rgba = (((j / 2) % 2) == ((i / 2) % 2)) ? 0u : ~0u;
-                m_surfels[m] = s;
+                g_surfels[m] = s;
 
                 // Clip border surfels.
                 if (j == 2 * n)
                 {
-                    m_surfels[m].p = Vector3f(-1.0f, 0.0f, 0.0f);
-                    m_surfels[m].rgba = ~s.rgba;
+                    g_surfels[m].p = Vector3f(-1.0f, 0.0f, 0.0f);
+                    g_surfels[m].rgba = ~s.rgba;
                 }
                 else if (i == 2 * n)
                 {
-                    m_surfels[m].p = Vector3f(0.0f, -1.0f, 0.0f);
-                    m_surfels[m].rgba = ~s.rgba;
+                    g_surfels[m].p = Vector3f(0.0f, -1.0f, 0.0f);
+                    g_surfels[m].rgba = ~s.rgba;
                 }
                 else if (j == 0)
                 {
-                    m_surfels[m].p = Vector3f(1.0f, 0.0f, 0.0f);
+                    g_surfels[m].p = Vector3f(1.0f, 0.0f, 0.0f);
                 }
                 else if (i == 0)
                 {
-                    m_surfels[m].p = Vector3f(0.0f, 1.0f, 0.0f);
+                    g_surfels[m].p = Vector3f(0.0f, 1.0f, 0.0f);
                 }
                 else
                 {
                     // Duplicate and clip inner surfels.
                     if (j % 2 == 0)
                     {
-                        m_surfels[m].p = Vector3f(1.0, 0.0f, 0.0f);
+                        g_surfels[m].p = Vector3f(1.0, 0.0f, 0.0f);
 
-                        m_surfels[++m] = s;
-                        m_surfels[m].p = Vector3f(-1.0, 0.0f, 0.0f);
-                        m_surfels[m].rgba = ~s.rgba;
+                        g_surfels[++m] = s;
+                        g_surfels[m].p = Vector3f(-1.0, 0.0f, 0.0f);
+                        g_surfels[m].rgba = ~s.rgba;
                     }
 
                     if (i % 2 == 0)
                     {
-                        m_surfels[m].p = Vector3f(0.0, 1.0f, 0.0f);
+                        g_surfels[m].p = Vector3f(0.0, 1.0f, 0.0f);
 
-                        m_surfels[++m] = s;
-                        m_surfels[m].p = Vector3f(0.0, -1.0f, 0.0f);
-                        m_surfels[m].rgba = ~s.rgba;
+                        g_surfels[++m] = s;
+                        g_surfels[m].p = Vector3f(0.0, -1.0f, 0.0f);
+                        g_surfels[m].rgba = ~s.rgba;
                     }
                 }
 
@@ -362,7 +248,134 @@ load_cube()
     cube[23].c = Vector3f(0.5f, 0.0f, -0.5f);
     cube[23].p = Vector3f(0.0f, 1.0f, 0.0f);
 
-    m_surfels = std::vector<Surfel>(cube, cube + 24);
+    g_surfels = std::vector<Surfel>(cube, cube + 24);
+}
+
+void
+load_dragon()
+{
+    std::vector<Eigen::Vector3f>              vertices, normals;
+    std::vector<std::array<unsigned int, 3>>  faces;
+
+    try
+    {
+        load_triangle_mesh("stanford_dragon_v344k_f688k.raw",
+            vertices, faces);
+    }
+    catch (std::runtime_error const& e)
+    {
+        std::cerr << e.what() << std::endl;
+        std::exit(EXIT_FAILURE);
+    }
+
+    GLviz::set_vertex_normals_from_triangle_mesh(
+        vertices, faces, normals);
+
+    mesh_to_surfel(vertices, faces, g_surfels);
+}
+
+void
+load_model()
+{
+    switch (g_model)
+    {
+        case 1:
+            load_plane(200);
+            break;
+        case 2:
+            load_cube();
+            break;
+        default:
+            load_dragon();
+    }
+}
+
+void
+load_triangle_mesh(std::string const& filename, std::vector<
+    Eigen::Vector3f>& vertices, std::vector<std::array<
+    unsigned int, 3>>& faces)
+{
+    std::cout << "\nRead " << filename << "." << std::endl;
+    std::ifstream input(filename);
+
+    if (input.good())
+    {
+        input.close();
+        GLviz::load_raw(filename, vertices, faces);
+    }
+    else
+    {
+        input.close();
+
+        std::ostringstream fqfn;
+        fqfn << path_resources;
+        fqfn << filename;
+        GLviz::load_raw(fqfn.str(), vertices, faces);
+    }
+
+    std::cout << "  #vertices " << vertices.size() << std::endl;
+    std::cout << "  #faces    " << faces.size() << std::endl;
+}
+
+void
+steiner_circumellipse(float const* v0_ptr, float const* v1_ptr,
+    float const* v2_ptr, float* p0_ptr, float* t1_ptr, float* t2_ptr)
+{
+    Matrix2f Q;
+    Vector3f d0, d1, d2;
+    {
+        using Vec = Map<const Vector3f>;
+        Vec v[] = { Vec(v0_ptr), Vec(v1_ptr), Vec(v2_ptr) };
+
+        d0 = v[1] - v[0];
+        d0.normalize();
+
+        d1 = v[2] - v[0];
+        d1 = d1 - d0 * d0.dot(d1);
+        d1.normalize();
+
+        d2 = (1.0f / 3.0f) * (v[0] + v[1] + v[2]);
+
+        Vector2f p[3];
+        for (unsigned int j(0); j < 3; ++j)
+        {
+            p[j] = Vector2f(
+                d0.dot(v[j] - d2),
+                d1.dot(v[j] - d2)
+            );
+        }
+
+        Matrix3f A;
+        for (unsigned int j(0); j < 3; ++j)
+        {
+            A.row(j) = Vector3f(
+                p[j].x() * p[j].x(),
+                2.0f * p[j].x() * p[j].y(),
+                p[j].y() * p[j].y()
+            );
+        }
+
+        FullPivLU<Matrix3f> lu(A);
+        Vector3f res = lu.solve(Vector3f::Ones());
+
+        Q(0, 0) = res(0);
+        Q(1, 1) = res(2);
+        Q(0, 1) = Q(1, 0) = res(1);
+    }
+
+    Map<Vector3f> p0(p0_ptr), t1(t1_ptr), t2(t2_ptr);
+    {
+        SelfAdjointEigenSolver<Matrix2f> es;
+        es.compute(Q);
+
+        Vector2f const& l = es.eigenvalues();
+        Vector2f const& e0 = es.eigenvectors().col(0);
+        Vector2f const& e1 = es.eigenvectors().col(1);
+
+        p0 = d2;
+        t1 = (1.0f / std::sqrt(l.x())) * (d0 * e0.x() + d1 * e0.y());
+        t2 = (1.0f / std::sqrt(l.y())) * (d0 * e1.x() + d1 * e1.y());
+    }
 }
 
 void
@@ -398,25 +411,27 @@ hsv2rgb(float h, float s, float v, float& r, float& g, float& b)
 }
 
 void
-load_dragon()
+mesh_to_surfel(std::vector<Eigen::Vector3f> const& vertices,
+    std::vector<std::array<unsigned int, 3>> const& faces,
+    std::vector<Surfel>& surfels)
 {
-    m_surfels.resize(m_faces.size());
+    surfels.resize(faces.size());
 
     for (unsigned int i(0); i < static_cast<unsigned int>(
-        m_faces.size()); ++i)
+        faces.size()); ++i)
     {
-        std::array<unsigned int, 3> face = m_faces[i];
+        std::array<unsigned int, 3> face = faces[i];
         Vector3f v[3] = {
-            m_vertices[face[0]],
-            m_vertices[face[1]],
-            m_vertices[face[2]]
+            vertices[face[0]],
+            vertices[face[1]],
+            vertices[face[2]]
         };
 
         Vector3f p0, t1, t2;
         steiner_circumellipse(
             v[0].data(), v[1].data(), v[2].data(),
             p0.data(), t1.data(), t2.data()
-            );
+        );
 
         Vector3f n_s = t1.cross(t2);
         Vector3f n_t = (v[1] - v[0]).cross(v[2] - v[0]);
@@ -426,213 +441,201 @@ load_dragon()
             t1.swap(t2);
         }
 
-        m_surfels[i].c = p0;
-        m_surfels[i].u = t1;
-        m_surfels[i].v = t2;
-        m_surfels[i].p = Vector3f::Zero();
+        surfels[i].c = p0;
+        surfels[i].u = t1;
+        surfels[i].v = t2;
+        surfels[i].p = Vector3f::Zero();
 
         float h = std::min((std::abs(p0.x()) / 0.45f) * 360.0f, 360.0f);
         float r, g, b;
         hsv2rgb(h, 1.0f, 1.0f, r, g, b);
-        m_surfels[i].rgba = static_cast<unsigned int>(r * 255.0f)
-                         | (static_cast<unsigned int>(g * 255.0f) << 8)
-                         | (static_cast<unsigned int>(b * 255.0f) << 16);
+        surfels[i].rgba = static_cast<unsigned int>(r * 255.0f)
+            | (static_cast<unsigned int>(g * 255.0f) << 8)
+            | (static_cast<unsigned int>(b * 255.0f) << 16);
     }
 }
 
 void
-get_model(void* value, void* data)
+display()
 {
-    *static_cast<unsigned int*>(value) = g_model;
+    viz->render_frame(g_surfels);
 }
 
 void
-set_model(void const* value, void* data)
+reshape(int width, int height)
 {
-    g_model = *static_cast<unsigned int const*>(value);
-    
-    switch (g_model)
+    const float aspect = static_cast<float>(width) /
+        static_cast<float>(height);
+
+    glViewport(0, 0, width, height);
+    g_camera.set_perspective(60.0f, aspect, 0.005f, 5.0f);
+}
+
+void
+close()
+{
+    viz = nullptr;
+}
+
+void
+gui()
+{
+    ImGui::Begin("Surface Splatting", nullptr);
+    ImGui::SetWindowPos(ImVec2(3.0f, 3.0f), ImGuiCond_Once);
+    ImGui::SetWindowSize(ImVec2(350.0f, 415.0f), ImGuiCond_Once);
+
+    ImGui::PushItemWidth(ImGui::GetContentRegionAvailWidth() * 0.55f);
+
+    ImGui::Text("fps \t %.1f fps", ImGui::GetIO().Framerate);
+
+    ImGui::SetNextTreeNodeOpen(true, ImGuiCond_Once);
+    if (ImGui::CollapsingHeader("Scene"))
     {
-        case 1:
-            load_plane(200);
-            break;
-        case 2:
-            load_cube();
-            break;
-        default:
-            load_dragon();
+        if (ImGui::Combo("Models", &g_model, "Dragon\0Plane\0Cube"))
+        {
+            load_model();
+        }
     }
+
+    ImGui::SetNextTreeNodeOpen(true, ImGuiCond_Once);
+    if (ImGui::CollapsingHeader("Surface Splatting"))
+    {
+        int shading_method = viz->smooth() ? 1 : 0;
+        if (ImGui::Combo("Shading", &shading_method, "Flat\0Smooth\0\0"))
+        {
+            viz->set_smooth(shading_method > 0 ? true : false);
+        }
+
+        ImGui::Separator();
+
+        int color_material = viz->color_material() ? 1 : 0;
+        if (ImGui::Combo("Color", &color_material, "Surfel\0Material\0\0"))
+        {
+            viz->set_color_material(color_material > 0 ? true : false);
+        }
+
+        float material_color[3];
+        std::copy(viz->material_color(), viz->material_color() + 3,
+            material_color);
+        if (ImGui::ColorEdit3("Material color", material_color))
+        {
+            viz->set_material_color(material_color);
+        }
+
+        float material_shininess = viz->material_shininess();
+        if (ImGui::DragFloat("Material shininess",
+            &material_shininess, 0.05f, 1e-12f, 1000.0f))
+        {
+            viz->set_material_shininess(std::min(std::max(
+                1e-12f, material_shininess), 1000.0f));
+        }
+
+        ImGui::Separator();
+
+        bool soft_zbuffer = viz->soft_zbuffer();
+        if (ImGui::Checkbox("Soft z-buffer", &soft_zbuffer))
+        {
+            viz->set_soft_zbuffer(soft_zbuffer);
+        }
+
+        float soft_zbuffer_epsilon = viz->soft_zbuffer_epsilon();
+        if (ImGui::DragFloat("Soft z-buffer epsilon",
+            &soft_zbuffer_epsilon, 1e-5f, 1e-5f, 1.0f, "%.5f"))
+        {
+            viz->set_soft_zbuffer_epsilon(std::min(std::max(
+                1e-5f, soft_zbuffer_epsilon), 1.0f));
+        }
+
+        ImGui::Separator();
+
+        bool ewa_filter = viz->ewa_filter();
+        if (ImGui::Checkbox("EWA filter", &ewa_filter))
+        {
+            viz->set_ewa_filter(ewa_filter);
+        }
+
+        float ewa_radius = viz->ewa_radius();
+        if (ImGui::DragFloat("EWA radius",
+            &ewa_radius, 1e-3f, 0.1f, 4.0f))
+        {
+            viz->set_ewa_radius(ewa_radius);
+        }
+
+        ImGui::Separator();
+
+        int point_size = viz->pointsize_method();
+        if (ImGui::Combo("Point size", &point_size,
+            "PBP\0BHZK05\0WHA+07\0ZRB+04\0\0"))
+        {
+            viz->set_pointsize_method(point_size);
+        }
+
+        float radius_scale = viz->radius_scale();
+        if (ImGui::DragFloat("Radius scale",
+            &radius_scale, 0.001f, 1e-6f, 2.0f))
+        {
+            viz->set_radius_scale(std::min(std::max(
+                1e-6f, radius_scale), 2.0f));
+        }
+
+        ImGui::Separator();
+
+        bool multisample_4x = viz->multisample();
+        if (ImGui::Checkbox("Multisample 4x", &multisample_4x))
+        {
+            viz->set_multisample(multisample_4x);
+        }
+
+        bool backface_culling = viz->backface_culling();
+        if (ImGui::Checkbox("Backface culling", &backface_culling))
+        {
+            viz->set_backface_culling(backface_culling);
+        }
+    }
+
+    ImGui::End();
 }
 
 void
-set_soft_zbuffer(void const* value, void* data)
+keyboard(SDL_Keycode key)
 {
-    viz->set_soft_zbuffer(*static_cast<bool const*>(value));
-
-    if (viz->soft_zbuffer())
-        TwDefine(" TweakBar/'EWA filter' readonly=false ");
-    else
-        TwDefine(" TweakBar/'EWA filter' readonly=true ");
+    switch (key)
+    {
+        case SDLK_5:
+            viz->set_smooth(!viz->smooth());
+            break;
+        case SDLK_c:
+            viz->set_color_material(!viz->color_material());
+            break;
+        case SDLK_z:
+            viz->set_soft_zbuffer(!viz->soft_zbuffer());
+            break;
+        case SDLK_u:
+            viz->set_ewa_filter(!viz->ewa_filter());
+            break;
+        case SDLK_t:
+            viz->set_pointsize_method((viz->pointsize_method() + 1) % 4);
+            break;
+    }
 }
-void get_soft_zbuffer(void* value, void* data)
-{ *static_cast<bool*>(value) = viz->soft_zbuffer(); }
-
-void set_soft_zbuffer_epsilon(void const* value, void* data)
-{ viz->set_soft_zbuffer_epsilon(*static_cast<float const*>(value)); }
-void get_soft_zbuffer_epsilon(void* value, void* data)
-{ *static_cast<float*>(value) = viz->soft_zbuffer_epsilon(); }
-
-void get_pointsize_method(void* value, void* data)
-{ *static_cast<unsigned int*>(value) = viz->pointsize_method(); }
-void set_pointsize_method(void const* value, void* data)
-{ viz->set_pointsize_method(*static_cast<unsigned int const*>(value)); }
-
-void set_ewa_filter(void const* enable, void* data)
-{ viz->set_ewa_filter(*static_cast<bool const*>(enable)); }
-void get_ewa_filter(void* value, void* data)
-{ *static_cast<bool*>(value) = viz->ewa_filter(); }
-
-void set_ewa_radius(void const* value, void* data)
-{ viz->set_ewa_radius(*static_cast<float const*>(value)); }
-void get_ewa_radius(void* value, void* data)
-{ *static_cast<float*>(value) = viz->ewa_radius(); }
-
-void set_multisample(void const* enable, void* data)
-{ viz->set_multisample(*static_cast<bool const*>(enable)); }
-void get_multisample(void* value, void* data)
-{ *static_cast<bool*>(value) = viz->multisample(); }
-
-void set_backface_culling(void const* enable, void* data)
-{ viz->set_backface_culling(*static_cast<bool const*>(enable)); }
-void get_backface_culling(void* value, void* data)
-{ *static_cast<bool*>(value) = viz->backface_culling(); }
-
-void get_smooth(void* value, void* data)
-{ *static_cast<bool*>(value) = viz->smooth(); }
-void set_smooth(void const* value, void* data)
-{ viz->set_smooth(*static_cast<bool const*>(value)); }
-
-void get_color_material(void* value, void* data)
-{ *static_cast<unsigned int*>(value) = viz->color_material() ? 1 : 0; }
-void set_color_material(void const* value, void* data)
-{ viz->set_color_material(*static_cast<unsigned int const*>(value) == 1); }
-
-void get_material_color(void* value, void* data)
-{ Map<Vector3f> color(static_cast<float*>(value));
-  color = Map<const Vector3f>(viz->material_color()); }
-void set_material_color(void const* value, void* data)
-{ viz->set_material_color(static_cast<float const*>(value)); }
-
-void get_material_shininess(void* value, void* data)
-{ *static_cast<float*>(value) = viz->material_shininess(); }
-void set_material_shininess(void const* value, void* data)
-{ viz->set_material_shininess(*static_cast<float const*>(value)); }
-
-void get_radius_scale(void* value, void* data)
-{ *static_cast<float*>(value) = viz->radius_scale(); }
-void set_radius_scale(void const* value, void* data)
-{ viz->set_radius_scale(*static_cast<float const*>(value)); }
 
 }
 
 int
 main(int argc, char* argv[])
 {
-    GLviz::init(argc, argv);
-  
-    camera.translate(Eigen::Vector3f(0.0f, 0.0f, -2.0f));
-    viz = std::unique_ptr<SplatRenderer>(new SplatRenderer(camera));
+    GLviz::GLviz();
 
-    try
-    {
-        load_triangle_mesh("stanford_dragon_v344k_f688k.raw");
-    }
-    catch(std::runtime_error const& e)
-    {
-        std::cerr << e.what() << std::endl;
-        std::exit(EXIT_FAILURE);
-    }
+    g_camera.translate(Eigen::Vector3f(0.0f, 0.0f, -2.0f));
+    viz = std::unique_ptr<SplatRenderer>(new SplatRenderer(g_camera));
 
-    set_model(&g_model, nullptr);
+    load_model();
 
-    // Setup AntTweakBar.
-    {
-        TwBar* bar = GLviz::twbar();
+    GLviz::display_callback(display);
+    GLviz::reshape_callback(reshape);
+    GLviz::close_callback(close);
+    GLviz::gui_callback(gui);
+    GLviz::keyboard_callback(keyboard);
 
-        TwType models = TwDefineEnumFromString("models",
-            "Dragon,Plane,Cube");
-        TwAddVarCB(bar, "Model", models, &set_model,
-            &get_model, nullptr, " group=Scene ");
-
-        TwAddSeparator(bar, nullptr, " group=Scene ");
-
-        TwType shading_type = TwDefineEnumFromString("shading_type",
-            "Flat,Phong");
-        TwAddVarCB(bar, "Shading", shading_type, &set_smooth,
-            &get_smooth, nullptr, " key=5 group='Surface Splatting' ");
-
-        TwAddSeparator(bar, nullptr, " group='Surface Splatting' ");
-
-        TwType color_src = TwDefineEnumFromString("color_src",
-            "Surfel,Material");
-        TwAddVarCB(bar, "Color", color_src, &set_color_material,
-            &get_color_material, nullptr,
-            " key='c' group='Surface Splatting' ");
-
-        TwAddVarCB(bar, "Material Color", TW_TYPE_COLOR3F,
-            &set_material_color, &get_material_color, nullptr,
-            " help='Material Color' group='Surface Splatting' ");
-
-        TwAddVarCB(bar, "Material Shininess", TW_TYPE_FLOAT,
-            &set_material_shininess, &get_material_shininess, nullptr,
-            " min=1e-12 max=1000 help='Material Shininess' \
-            group='Surface Splatting' ");
-
-        TwAddSeparator(bar, nullptr, " group='Surface Splatting' ");
-
-        TwAddVarCB(bar, "Soft z-buffer", TW_TYPE_BOOLCPP,
-            &set_soft_zbuffer, &get_soft_zbuffer, nullptr,
-            " key=z group='Surface Splatting' ");
-
-        TwAddVarCB(bar, "EWA filter", TW_TYPE_BOOLCPP,
-            &set_ewa_filter, &get_ewa_filter, nullptr,
-            " key=u help='EWA filter' group='Surface Splatting' ");
-
-        TwAddVarCB(bar, "EWA radius", TW_TYPE_FLOAT,
-            &set_ewa_radius, &get_ewa_radius, nullptr,
-            " min=0.1 max=4.0 step=1e-3 group='Surface Splatting' ");
-
-        TwAddVarCB(bar, "Soft z-buffer epsilon", TW_TYPE_FLOAT,
-            &set_soft_zbuffer_epsilon, &get_soft_zbuffer_epsilon, nullptr,
-            " min=0 max=1.0 step=1e-6 group='Surface Splatting' ");
-
-        TwType point_size = TwDefineEnumFromString("Point size",
-            "PBP,BHZK05,WHA+07,ZRB+04");
-        TwAddVarCB(bar, "Point size", point_size, &set_pointsize_method,
-            &get_pointsize_method, nullptr,
-            " key='t' group='Surface Splatting' ");
-
-        TwAddSeparator(bar, NULL, " group='Surface Splatting' ");
-
-        TwAddVarCB(bar, "Multisample 4x", TW_TYPE_BOOLCPP,
-            &set_multisample, &get_multisample, nullptr,
-            " help='Multisample 4x' group='Surface Splatting' ");
-
-        TwAddVarCB(bar, "Backface culling", TW_TYPE_BOOLCPP,
-            &set_backface_culling, &get_backface_culling, nullptr,
-            " group='Surface Splatting' ");
-
-        TwAddVarCB(bar, "Radius scale", TW_TYPE_FLOAT,
-            &set_radius_scale, &get_radius_scale, nullptr,
-            " min=1e-6 max=2.0 step=1e-3 group='Surface Splatting' ");
-    }
-
-    TwDefine(" TweakBar size='300 400' valueswidth='100' \
-        color='100 100 100' refresh=0.01 ");
-
-    GLviz::display_callback(displayFunc);
-    GLviz::reshape_callback(reshapeFunc);
-    GLviz::close_callback(closeFunc);
-
-    return GLviz::exec(camera);
+    return GLviz::exec(g_camera);
 }

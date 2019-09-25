@@ -3,6 +3,10 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/Modules")
 
 project(glviz)
 
+set(extern_install_dir "${CMAKE_SOURCE_DIR}/.extern/install")
+list(APPEND CMAKE_MODULE_PATH "${extern_install_dir}/cmake/Modules")
+list(APPEND CMAKE_PREFIX_PATH "${extern_install_dir}")
+
 # Visual studio solution directories.
 set_property(GLOBAL PROPERTY USE_FOLDERS on)
 
@@ -20,6 +24,4 @@ endif()
 set(EXECUTABLE_OUTPUT_PATH "${PROJECT_BINARY_DIR}/bin")
 set(LIBRARY_OUTPUT_PATH    "${PROJECT_BINARY_DIR}/bin")
 
-add_subdirectory(extern)
-add_subdirectory(glviz)
 add_subdirectory(surface_splatting)

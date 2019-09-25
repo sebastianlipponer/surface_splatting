@@ -17,7 +17,9 @@
 
 #include "framebuffer.hpp"
 
-#include <GLviz>
+#include <GLviz/glviz.hpp>
+#include <GLviz/utility.hpp>
+
 #include <iostream>
 #include <cstdlib>
 

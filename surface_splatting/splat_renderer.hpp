@@ -21,7 +21,7 @@
 #include "program_attribute.hpp"
 #include "program_finalization.hpp"
 
-#include <GLviz>
+#include <GLviz/buffer.hpp>
 
 #include "framebuffer.hpp"
 
