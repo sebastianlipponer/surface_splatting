@@ -25,9 +25,7 @@ target_sources(shader PRIVATE
 source_group("Shader Files" FILES ${SHADER_GLSL})
 
 # Surface splatting executable.
-add_executable(surface_splatting)
-
-target_sources(surface_splatting PRIVATE
+add_executable(surface_splatting
     main.cpp
     framebuffer.hpp
     framebuffer.cpp
