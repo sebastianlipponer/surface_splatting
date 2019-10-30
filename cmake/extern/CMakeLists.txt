@@ -51,6 +51,7 @@ function(BuildProject _name)
         INSTALL_DIR "${CMAKE_INSTALL_PREFIX}"
         CMAKE_CACHE_ARGS "-DCMAKE_INSTALL_PREFIX:PATH=<INSTALL_DIR>"
             "-DCMAKE_BUILD_TYPE:STRING=${_arg_BUILD_TYPE}"
+            "-DCMAKE_FIND_ROOT_PATH:PATH=<INSTALL_DIR>"
 
         STEP_TARGETS install
 
