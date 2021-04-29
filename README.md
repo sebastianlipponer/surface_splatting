@@ -1,4 +1,5 @@
 # Surface Splatting
+[![Build badge](https://github.com/sebastianlipponer/surface_splatting/actions/workflows/build.yml/badge.svg)](https://github.com/sebastianlipponer/surface_splatting/actions?workflow=build)
 
 This demo implements a point rendering and texture filtering technique called *Surface Splatting*<sup>1</sup>. More specifically, it implements the GPU accelerated surface splatting approach by Botsch et al.<sup>2</sup> using OpenGL 3.3 (core profile). This basically comprises a raycasting based rasterization of elliptical splats, a deferred shading pipeline and an approximation to the original EWA filter<sup>1</sup>. The demo has been tested on a NVIDIA GTX 1080 Ti GPU using driver version 436.02 on Windows 10 (compiled with MSVC 2019) and 418.74 on Linux (compiled with GCC 8.3). It is built on top of [GLviz](https://github.com/sebastianlipponer/glviz) and is therefore rather simple to compile.
 
