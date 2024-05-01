@@ -1,5 +1,9 @@
 cmake_minimum_required(VERSION 3.8.2 FATAL_ERROR)
 
+if (POLICY CMP0135)
+    cmake_policy(SET CMP0135 NEW)
+endif()
+
 project(build-extern
     LANGUAGES NONE
 )
