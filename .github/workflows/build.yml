@@ -30,7 +30,7 @@ jobs:
               shell: bash
               run: |
                   if [ "$RUNNER_OS" == "Windows" ]; then
-                      cmd.exe /C build-extern.cmd
+                      cmd.exe //c build-extern.cmd
                   elif [ "$RUNNER_OS" == "Linux" ]; then
                       ./build-extern.sh
                   fi
