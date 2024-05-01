@@ -97,8 +97,8 @@ DownloadProject(imgui
 )
 
 DownloadProject(eigen
-    URL     "https://gitlab.com/libeigen/eigen/-/archive/3.3.7/eigen-3.3.7.zip"
-    URL_MD5 "888aab45512cc0c734b3e8f60280daba"
+    URL     "https://gitlab.com/libeigen/eigen/-/archive/3.4.0/eigen-3.4.0.zip"
+    URL_MD5 "994092410ba29875184f7725e0371596"
 )
 
 DownloadProject(glviz
