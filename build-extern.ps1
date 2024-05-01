@@ -44,7 +44,8 @@ if ($msvc)
     $path = $msvc.installationPath
     $version = [Version]$msvc.installationVersion
 
-    if (($version.Major -eq 16) -or ($version.Major -eq 15))
+    if (($version.Major -eq 17) -or ($version.Major -eq 16) `
+                                -or ($version.Major -eq 15))
     {
         $global:msvc = Join-Path -Path $msvc.installationPath `
                                  -ChildPath 'VC\Auxiliary\Build'
