@@ -73,8 +73,8 @@ endfunction()
 
 # Download.
 DownloadProject(libsdl
-    URL     "https://www.libsdl.org/release/SDL2-2.0.10.zip"
-    URL_MD5 "6b2e9a4a2faba4ff277062cf669724f4"
+    URL     "https://github.com/libsdl-org/SDL/releases/download/release-2.30.2/SDL2-2.30.2.zip"
+    URL_MD5 "871df8aa224f1ba462837e99b26da133"
 )
 
 DownloadProject(glew
