@@ -503,24 +503,24 @@ gui()
     ImGui::SetWindowPos(ImVec2(3.0f, 3.0f), ImGuiCond_Once);
     ImGui::SetWindowSize(ImVec2(350.0f, 415.0f), ImGuiCond_Once);
 
-    ImGui::PushItemWidth(ImGui::GetContentRegionAvailWidth() * 0.55f);
+    ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x * 0.55f);
 
     ImGui::Text("fps \t %.1f fps", ImGui::GetIO().Framerate);
 
-    ImGui::SetNextTreeNodeOpen(true, ImGuiCond_Once);
+    ImGui::SetNextItemOpen(true, ImGuiCond_Once);
     if (ImGui::CollapsingHeader("Scene"))
     {
-        if (ImGui::Combo("Models", &g_model, "Dragon\0Plane\0Cube"))
+        if (ImGui::Combo("Models", &g_model, "Dragon\0Plane\0Cube\0"))
         {
             load_model();
         }
     }
 
-    ImGui::SetNextTreeNodeOpen(true, ImGuiCond_Once);
+    ImGui::SetNextItemOpen(true, ImGuiCond_Once);
     if (ImGui::CollapsingHeader("Surface Splatting"))
     {
         int shading_method = viz->smooth() ? 1 : 0;
-        if (ImGui::Combo("Shading", &shading_method, "Flat\0Smooth\0\0"))
+        if (ImGui::Combo("Shading", &shading_method, "Flat\0Smooth\0"))
         {
             viz->set_smooth(shading_method > 0 ? true : false);
         }
@@ -528,7 +528,7 @@ gui()
         ImGui::Separator();
 
         int color_material = viz->color_material() ? 1 : 0;
-        if (ImGui::Combo("Color", &color_material, "Surfel\0Material\0\0"))
+        if (ImGui::Combo("Color", &color_material, "Surfel\0Material\0"))
         {
             viz->set_color_material(color_material > 0 ? true : false);
         }
@@ -584,7 +584,7 @@ gui()
 
         int point_size = viz->pointsize_method();
         if (ImGui::Combo("Point size", &point_size,
-            "PBP\0BHZK05\0WHA+07\0ZRB+04\0\0"))
+            "PBP\0BHZK05\0WHA+07\0ZRB+04\0"))
         {
             viz->set_pointsize_method(point_size);
         }

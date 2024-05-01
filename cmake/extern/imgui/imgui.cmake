@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.8.2 FATAL_ERROR)
 
 project(ImGui
-    VERSION 1.72
+    VERSION 1.90.5
     LANGUAGES CXX
 )
 
@@ -20,6 +20,7 @@ target_sources(imgui PRIVATE
     imgui.cpp
     imgui_demo.cpp
     imgui_draw.cpp
+    imgui_tables.cpp
     imgui_widgets.cpp
 )
 
@@ -34,15 +35,11 @@ find_package(glew REQUIRED CONFIG)
 add_library(imgui_sdl STATIC)
 
 target_sources(imgui_sdl PRIVATE
-    examples/imgui_impl_sdl.h
-    examples/imgui_impl_opengl3.h
+    backends/imgui_impl_sdl2.h
+    backends/imgui_impl_opengl3.h
 
-    examples/imgui_impl_sdl_patched.cpp
-    examples/imgui_impl_opengl3.cpp
-)
-
-set_source_files_properties(examples/imgui_impl_opengl3.cpp
-    PROPERTIES COMPILE_DEFINITIONS IMGUI_IMPL_OPENGL_LOADER_GLEW
+    backends/imgui_impl_sdl2.cpp
+    backends/imgui_impl_opengl3.cpp
 )
 
 target_include_directories(imgui_sdl
@@ -89,8 +86,8 @@ install(TARGETS imgui imgui_sdl
 )
 
 install(
-    FILES imgui.h imconfig.h examples/imgui_impl_sdl.h
-          examples/imgui_impl_opengl3.h
+    FILES imgui.h imconfig.h backends/imgui_impl_sdl2.h
+          backends/imgui_impl_opengl3.h
     DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
 )
 

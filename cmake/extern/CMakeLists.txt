@@ -85,15 +85,13 @@ DownloadProject(glew
 )
 
 DownloadProject(imgui
-    URL     "https://github.com/ocornut/imgui/archive/v1.72b.zip"
-    URL_MD5 "de566304c3abc2aef99b81deb1dfb37e"
+    URL     "https://github.com/ocornut/imgui/archive/refs/tags/v1.90.5.zip"
+    URL_MD5 "2c422ba219f18f25e23ce66ce7eaba2d"
 
     PATCH_COMMAND ${CMAKE_COMMAND} -E copy
         "${CMAKE_CURRENT_SOURCE_DIR}/imgui/imgui.cmake" <SOURCE_DIR>/CMakeLists.txt
     COMMAND ${CMAKE_COMMAND} -E copy
         "${CMAKE_CURRENT_SOURCE_DIR}/imgui/Config.cmake.in" <SOURCE_DIR>
-    COMMAND ${CMAKE_COMMAND} -P
-        "${CMAKE_CURRENT_SOURCE_DIR}/imgui/patch.cmake"
 )
 
 DownloadProject(eigen
